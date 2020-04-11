@@ -109,6 +109,8 @@ interface Reddit {
     fun setMessagesRead(read: Boolean, vararg messages: Identifiable): Completable
 
     fun setAllMessagesRead(): Completable
+
+    fun save(thing: Identifiable, saved: Boolean): Completable
   }
 
   interface Users {

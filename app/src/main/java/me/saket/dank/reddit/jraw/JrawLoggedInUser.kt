@@ -103,4 +103,17 @@ class JrawLoggedInUser(private val clients: Observable<RedditClient>, private va
         .firstOrError()
         .flatMapCompletable { Completable.fromAction { it.me().inbox().markAllRead() } }
   }
+
+  override fun save(thing: Identifiable, saved: Boolean): Completable {
+    return clients
+            .firstOrError()
+            .flatMapCompletable {
+              Completable.fromAction {
+                when (thing) {
+                  is Submission -> it.submission(thing.id).setSaved(saved)
+                  else -> throw AssertionError("Unknown contribution for vote: $thing")
+                }
+              }
+            }
+  }
 }

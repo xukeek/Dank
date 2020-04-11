@@ -60,6 +60,7 @@ public interface SubmissionCommentOptions {
     private final TextView commentCountView;
     private final Button commentSortingButton;
     private final Button commentRefreshButton;
+    private final Button savedButton;
 
     private UiModel uiModel;
 
@@ -72,12 +73,14 @@ public interface SubmissionCommentOptions {
       commentCountView = itemView.findViewById(R.id.submission_comment_count);
       commentSortingButton = itemView.findViewById(R.id.submission_comment_sorting);
       commentRefreshButton = itemView.findViewById(R.id.submission_comment_manual_refresh);
+      savedButton = itemView.findViewById(R.id.submission_comment_saved);
       commentOptionsContainerView = (View) commentSortingButton.getParent();
     }
 
     public void setupCommentOptionClicks(PublishRelay<UiEvent> events) {
       commentSortingButton.setOnClickListener(o -> events.accept(SubmissionChangeCommentSortClicked.create(commentOptionsContainerView)));
       commentRefreshButton.setOnClickListener(o -> events.accept(SubmissionCommentsRefreshClicked.create()));
+      savedButton.setOnClickListener(o -> events.accept(SubmissionCommentsRefreshClicked.create()));
     }
 
     public void set(UiModel uiModel) {

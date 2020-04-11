@@ -57,6 +57,19 @@
       android:text="@string/submission_comments_refresh"
       android:textAllCaps="false"
       android:textColor="@color/gray_500" />
+
+    <me.saket.dank.widgets.TintableCompoundDrawableButton
+      android:id="@+id/submission_comment_saved"
+      style="@style/DankButton.Borderless"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:background="?attr/selectableItemBackgroundBorderless"
+      android:drawablePadding="@dimen/spacing8"
+      android:drawableStart="@drawable/ic_refresh_18dp"
+      android:minWidth="0dp"
+      android:text="@string/submission_comments_refresh"
+      android:textAllCaps="false"
+      android:textColor="@color/gray_500" />
   </LinearLayout>
 
   <View style="@style/DankSeparator.VerticalContent" />

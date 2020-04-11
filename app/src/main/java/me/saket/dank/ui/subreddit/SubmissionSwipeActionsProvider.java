@@ -15,6 +15,7 @@ import me.saket.dank.R;
 import me.saket.dank.data.OnLoginRequireListener;
 import me.saket.dank.data.SwipeEvent;
 import me.saket.dank.ui.submission.BookmarksRepository;
+import me.saket.dank.ui.submission.events.ContributionSaveSwipeEvent;
 import me.saket.dank.ui.submission.events.ContributionVoteSwipeEvent;
 import me.saket.dank.ui.subreddit.events.SubmissionOpenInNewTabSwipeEvent;
 import me.saket.dank.ui.subreddit.events.SubmissionOptionSwipeEvent;
@@ -174,11 +175,13 @@ public class SubmissionSwipeActionsProvider implements SwipeableLayout.SwipeActi
 
       case ACTION_NAME_SAVE:
         bookmarksRepository.get().markAsSaved(submission);
+        swipeEvents.accept(ContributionSaveSwipeEvent.create(submission, true));
         isUndoAction = false;
         break;
 
       case ACTION_NAME_UNSAVE:
         bookmarksRepository.get().markAsUnsaved(submission);
+        swipeEvents.accept(ContributionSaveSwipeEvent.create(submission, false));
         isUndoAction = true;
         break;
 

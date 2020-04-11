@@ -1,5 +1,7 @@
 package me.saket.dank.vote;
 
+import android.util.Log;
+
 import com.google.auto.value.AutoValue;
 
 import net.dean.jraw.models.Comment;

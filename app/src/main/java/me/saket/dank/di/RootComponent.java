@@ -18,6 +18,7 @@ import me.saket.dank.notifs.MessageNotifActionsJobService;
 import me.saket.dank.notifs.MessagesNotificationManager;
 import me.saket.dank.reddit.RedditModule;
 import me.saket.dank.reply.RetryReplyJobService;
+import me.saket.dank.save.SaveJobService;
 import me.saket.dank.ui.PlaygroundActivity;
 import me.saket.dank.ui.appshortcuts.AppShortcutRepository;
 import me.saket.dank.ui.appshortcuts.ConfigureAppShortcutsActivity;
@@ -129,6 +130,8 @@ public interface RootComponent {
   void inject(LoginActivity target);
 
   void inject(VoteJobService target);
+
+  void inject(SaveJobService target);
 
   void inject(SubmissionOptionsPopup target);
 

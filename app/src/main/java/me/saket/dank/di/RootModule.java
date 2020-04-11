@@ -84,6 +84,12 @@ public class RootModule {
   }
 
   @Provides
+  @Named("saves")
+  SharedPreferences provideSharedPrefsForSaveManager() {
+    return appContext.getSharedPreferences("saves", Context.MODE_PRIVATE);
+  }
+
+  @Provides
   @Singleton
   OkHttpClient provideOkHttpClient() {
     OkHttpClient.Builder builder = new OkHttpClient.Builder()

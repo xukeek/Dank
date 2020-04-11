@@ -61,6 +61,7 @@ import me.saket.dank.data.ResolvedError;
 import me.saket.dank.data.UserPreferences;
 import me.saket.dank.di.Dank;
 import me.saket.dank.reddit.Reddit;
+import me.saket.dank.save.SaveManager;
 import me.saket.dank.ui.DankPullCollapsibleActivity;
 import me.saket.dank.ui.UiEvent;
 import me.saket.dank.ui.UrlRouter;
@@ -71,9 +72,11 @@ import me.saket.dank.ui.preferences.UserPreferencesActivity;
 import me.saket.dank.ui.submission.ArchivedSubmissionDialogActivity;
 import me.saket.dank.ui.submission.CachedSubmissionFolder;
 import me.saket.dank.ui.submission.SortingAndTimePeriod;
+import me.saket.dank.ui.submission.SubmissionAndComments;
 import me.saket.dank.ui.submission.SubmissionPageLayout;
 import me.saket.dank.ui.submission.SubmissionRepository;
 import me.saket.dank.ui.submission.adapter.SubmissionCommentsHeader;
+import me.saket.dank.ui.submission.events.ContributionSaveSwipeEvent;
 import me.saket.dank.ui.submission.events.ContributionVoteSwipeEvent;
 import me.saket.dank.ui.subreddit.events.SubmissionOpenInNewTabSwipeEvent;
 import me.saket.dank.ui.subreddit.events.SubmissionOptionSwipeEvent;
@@ -146,6 +149,7 @@ public class SubredditActivity extends DankPullCollapsibleActivity
   @Inject Lazy<UrlRouter> urlRouter;
   @Inject Lazy<UrlParser> urlParser;
   @Inject Lazy<VotingManager> votingManager;
+  @Inject Lazy<SaveManager> saveManager;
   @Inject Lazy<SubredditController> subredditController;
   @Inject Lazy<UserSessionRepository> userSessionRepository;
   @Inject Lazy<OnLoginRequireListener> loginRequireListener;
@@ -487,6 +491,24 @@ public class SubredditActivity extends DankPullCollapsibleActivity
         .filter(voteEvent -> voteEvent.contribution().isArchived())
         .takeUntil(lifecycle().onDestroy())
         .subscribe(voteEvent -> startActivity(ArchivedSubmissionDialogActivity.intent(this)));
+
+    // Save swipe gestures.
+    Observable<ContributionSaveSwipeEvent> sharedSaveSwipeActions = submissionsAdapter.swipeEvents()
+            .ofType(ContributionSaveSwipeEvent.class)
+            .share();
+
+    sharedSaveSwipeActions
+            .filter(saveEvent -> !saveEvent.contribution().isArchived())
+            .flatMapCompletable(saveEvent -> saveEvent.toSave()
+                    .saveAndSend(saveManager.get())
+                    .subscribeOn(io()))
+            .ambWith(lifecycle().onDestroyCompletable())
+            .subscribe();
+
+    sharedSaveSwipeActions
+            .filter(saveEvent -> saveEvent.contribution().isArchived())
+            .takeUntil(lifecycle().onDestroy())
+            .subscribe(voteEvent -> startActivity(ArchivedSubmissionDialogActivity.intent(this)));
 
     subredditChangesStream
         .observeOn(mainThread())

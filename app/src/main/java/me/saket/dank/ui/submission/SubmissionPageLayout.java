@@ -32,6 +32,7 @@ import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SimpleItemAnimator;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -87,6 +88,7 @@ import me.saket.dank.di.Dank;
 import me.saket.dank.reply.Reply;
 import me.saket.dank.reply.ReplyRepository;
 import me.saket.dank.reply.RetryReplyJobService;
+import me.saket.dank.save.SaveManager;
 import me.saket.dank.ui.DankActivity;
 import me.saket.dank.ui.ScreenSavedState;
 import me.saket.dank.ui.UiEvent;
@@ -110,6 +112,7 @@ import me.saket.dank.ui.submission.adapter.SubmissionScreenUiModel;
 import me.saket.dank.ui.submission.adapter.SubmissionUiConstructor;
 import me.saket.dank.ui.submission.events.CommentClicked;
 import me.saket.dank.ui.submission.events.CommentOptionSwipeEvent;
+import me.saket.dank.ui.submission.events.ContributionSaveSwipeEvent;
 import me.saket.dank.ui.submission.events.ContributionVoteSwipeEvent;
 import me.saket.dank.ui.submission.events.InlineReplyRequestEvent;
 import me.saket.dank.ui.submission.events.LoadMoreCommentsClickEvent;
@@ -210,6 +213,7 @@ public class SubmissionPageLayout extends ExpandablePageLayout implements Expand
 
   @Inject Lazy<OnLoginRequireListener> onLoginRequireListener;
   @Inject Lazy<VotingManager> votingManager;
+  @Inject Lazy<SaveManager> saveManager;
   @Inject Lazy<UserSessionRepository> userSessionRepository;
   @Inject Lazy<UrlParser> urlParser;
   @Inject Lazy<SubmissionVideoHolder> contentVideoViewHolder;
@@ -658,6 +662,31 @@ public class SubmissionPageLayout extends ExpandablePageLayout implements Expand
         .filter(pair -> pair.second().isArchived())
         .takeUntil(lifecycle().onDestroy())
         .subscribe(o -> getContext().startActivity(ArchivedSubmissionDialogActivity.intent(getContext())));
+
+    // Save swipe gesture.
+    Observable<Pair<ContributionSaveSwipeEvent, Submission>> sharedSaveActions = commentsAdapter.swipeEvents()
+            .ofType(ContributionSaveSwipeEvent.class)
+            .withLatestFrom(
+                    submissionStream
+                            .filter(Optional::isPresent)
+                            .map(Optional::get)
+                            .map(SubmissionAndComments::getSubmission),
+                    Pair::create)
+            .share();
+
+    sharedSaveActions
+            .filter(pair -> !pair.second().isArchived())
+            .map(Pair::first)
+            .flatMapCompletable(saveEvent -> {
+              return saveEvent.toSave().saveAndSend(saveManager.get()).subscribeOn(io());
+            })
+            .ambWith(lifecycle().onDestroyCompletable())
+            .subscribe();
+
+    sharedSaveActions
+            .filter(pair -> pair.second().isArchived())
+            .takeUntil(lifecycle().onDestroy())
+            .subscribe(o -> getContext().startActivity(ArchivedSubmissionDialogActivity.intent(getContext())));
 
     // Inline reply additions.
     // Wait till the reply's View is added to the list and show keyboard.

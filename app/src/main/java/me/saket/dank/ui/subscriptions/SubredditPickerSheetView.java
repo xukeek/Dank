@@ -58,6 +58,7 @@ import me.saket.dank.ui.subreddit.SubredditActivity;
 import me.saket.dank.ui.subreddit.Subscribeable;
 import me.saket.dank.ui.user.UserSessionRepository;
 import me.saket.dank.utils.Animations;
+import me.saket.dank.utils.Pair;
 import me.saket.dank.utils.Views;
 import me.saket.dank.utils.itemanimators.SlideLeftAlphaAnimator;
 import me.saket.dank.widgets.ToolbarExpandableSheet;
@@ -250,7 +251,7 @@ public class SubredditPickerSheetView extends FrameLayout implements SubredditAd
               if (!exactSearchFound) {
                 ArrayList<SubredditSubscription> filteredSubsWithQuery = new ArrayList<>(filteredSubs.size() + 1);
                 filteredSubsWithQuery.addAll(filteredSubs);
-                filteredSubsWithQuery.add(SubredditSubscription.create(searchTerm, SubredditSubscription.PendingState.NONE, false));
+                filteredSubsWithQuery.add(SubredditSubscription.create(searchTerm, SubredditSubscription.PendingState.NONE, false, false));
                 return Collections.unmodifiableList(filteredSubsWithQuery);
               }
             }

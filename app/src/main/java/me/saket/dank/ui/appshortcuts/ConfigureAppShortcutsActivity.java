@@ -353,7 +353,7 @@ public class ConfigureAppShortcutsActivity extends DankActivity {
       if (!exactSearchFound) {
         ArrayList<SubredditSubscription> filteredSubsWithQuery = new ArrayList<>(filteredSubs.size() + 1);
         filteredSubsWithQuery.addAll(filteredSubs);
-        filteredSubsWithQuery.add(SubredditSubscription.create(searchTerm, SubredditSubscription.PendingState.NONE, false));
+        filteredSubsWithQuery.add(SubredditSubscription.create(searchTerm, SubredditSubscription.PendingState.NONE, false, false));
         return Collections.unmodifiableList(filteredSubsWithQuery);
       }
     }

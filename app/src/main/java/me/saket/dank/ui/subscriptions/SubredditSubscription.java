@@ -10,7 +10,7 @@ import io.reactivex.functions.Function;
 import me.saket.dank.utils.Cursors;
 
 /**
- * Represents a subreddit subscribed by the user.
+ * Represents a subreddit/multiReddit subscribed by the user.
  */
 @AutoValue
 public abstract class SubredditSubscription implements Parcelable {
@@ -24,12 +24,17 @@ public abstract class SubredditSubscription implements Parcelable {
   static final String HIDDEN = "1";
   static final String NOT_HIDDEN = "0";
 
+  static final String COLUMN_IS_MULTI = "is_multi";
+  static final String MULTI = "1";
+  static final String NOT_MULTI = "0";
+
   public static final String QUERY_CREATE_TABLE =
       "CREATE TABLE " + TABLE_NAME + " ("
           + COLUMN_NAME + " TEXT NOT NULL PRIMARY KEY, "
           + COLUMN_PENDING_ACTION + " TEXT NOT NULL, "
           + COLUMN_VISIT_COUNT + " TEXT NOT NULL, "
-          + COLUMN_IS_HIDDEN + " INTEGER NOT NULL)";
+          + COLUMN_IS_HIDDEN + " INTEGER NOT NULL, "
+          + COLUMN_IS_MULTI + " INTEGER NOT NULL DEFAULT 0)";
 
   static final String QUERY_GET_ALL =
       "SELECT * FROM " + TABLE_NAME + " ORDER BY " + COLUMN_NAME + " ASC";
@@ -41,20 +46,20 @@ public abstract class SubredditSubscription implements Parcelable {
       "SELECT * FROM " + TABLE_NAME
           + " WHERE " + COLUMN_PENDING_ACTION + " == '" + PendingState.PENDING_SUBSCRIBE + "'"
           + " OR " + COLUMN_PENDING_ACTION + " == '" + PendingState.PENDING_UNSUBSCRIBE + "'"
-          + " ORDER BY " + COLUMN_NAME + " COLLATE NOCASE";
+          + " ORDER BY " + COLUMN_IS_MULTI + " DESC, " + COLUMN_NAME + " COLLATE NOCASE";
 
   static final String QUERY_SEARCH_ALL_SUBSCRIBED_INCLUDING_HIDDEN =
       "SELECT * FROM " + TABLE_NAME
           + " WHERE " + COLUMN_NAME + " LIKE ?"
           + " AND " + COLUMN_PENDING_ACTION + " != '" + PendingState.PENDING_UNSUBSCRIBE + "' "
-          + " ORDER BY " + COLUMN_NAME + " COLLATE NOCASE";
+          + " ORDER BY " + COLUMN_IS_MULTI + " DESC," + COLUMN_NAME + " COLLATE NOCASE";
 
   static final String QUERY_SEARCH_ALL_SUBSCRIBED_EXCLUDING_HIDDEN =
       "SELECT * FROM " + TABLE_NAME
           + " WHERE " + COLUMN_NAME + " LIKE ?"
           + " AND " + COLUMN_PENDING_ACTION + " != '" + PendingState.PENDING_UNSUBSCRIBE + "'"
           + " AND " + COLUMN_IS_HIDDEN + " != '" + HIDDEN + "'"
-          + " ORDER BY " + COLUMN_NAME + " COLLATE NOCASE";
+          + " ORDER BY " + COLUMN_IS_MULTI + " DESC," + COLUMN_NAME + " COLLATE NOCASE";
 
   static final String WHERE_NAME
       = COLUMN_NAME + " = ?";
@@ -76,6 +81,8 @@ public abstract class SubredditSubscription implements Parcelable {
    */
   public abstract boolean isHidden();
 
+  public abstract boolean isMulti();
+
   public boolean isUnsubscribePending() {
     return pendingState() == PendingState.PENDING_UNSUBSCRIBE;
   }
@@ -92,6 +99,7 @@ public abstract class SubredditSubscription implements Parcelable {
     values.put(COLUMN_PENDING_ACTION, pendingState().toString());
     values.put(COLUMN_VISIT_COUNT, visitCount());
     values.put(COLUMN_IS_HIDDEN, isHidden() ? HIDDEN : NOT_HIDDEN);
+    values.put(COLUMN_IS_MULTI, isMulti() ? MULTI : NOT_MULTI);
     return values;
   }
 
@@ -101,10 +109,11 @@ public abstract class SubredditSubscription implements Parcelable {
           .pendingState(PendingState.valueOf(Cursors.string(cursor, COLUMN_PENDING_ACTION)))
           .visitCount(Cursors.intt(cursor, COLUMN_VISIT_COUNT))
           .isHidden(HIDDEN.equals(Cursors.string(cursor, COLUMN_IS_HIDDEN)))
+          .isMulti(MULTI.equals(Cursors.string(cursor, COLUMN_IS_MULTI)))
           .build();
 
-  public static SubredditSubscription create(String name, PendingState pendingState, boolean isHidden) {
-    return new AutoValue_SubredditSubscription(name, pendingState, 0, isHidden);
+  public static SubredditSubscription create(String name, PendingState pendingState, boolean isHidden, boolean isMulti) {
+    return new AutoValue_SubredditSubscription(name, pendingState, 0, isHidden, isMulti);
   }
 
   public static Builder builder() {
@@ -120,6 +129,8 @@ public abstract class SubredditSubscription implements Parcelable {
     public abstract Builder visitCount(int visitCount);
 
     public abstract Builder isHidden(boolean hidden);
+
+    public abstract Builder isMulti(boolean multi);
 
     public abstract SubredditSubscription build();
   }

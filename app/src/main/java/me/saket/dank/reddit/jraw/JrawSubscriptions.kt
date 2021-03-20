@@ -5,6 +5,7 @@ import io.reactivex.Observable
 import io.reactivex.Single
 import me.saket.dank.reddit.Reddit
 import net.dean.jraw.RedditClient
+import net.dean.jraw.models.Multireddit
 import net.dean.jraw.models.Subreddit
 import net.dean.jraw.pagination.Paginator
 
@@ -21,6 +22,10 @@ class JrawSubscriptions(private val clients: Observable<RedditClient>) : Reddit.
               .build()
               .accumulateMerged(200)
         }
+  }
+
+  override fun userMultiSubscriptions(): Single<List<Multireddit>> {
+    return clients.firstOrError().map { it.me().listMultis() }
   }
 
   override fun add(subreddit: Subreddit): Completable {

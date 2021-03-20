@@ -3,6 +3,7 @@ package me.saket.dank.utils;
 import android.os.Build;
 
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;

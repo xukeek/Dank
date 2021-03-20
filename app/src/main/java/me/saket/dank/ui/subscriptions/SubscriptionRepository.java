@@ -12,6 +12,7 @@ import android.support.annotation.VisibleForTesting;
 
 import com.squareup.sqlbrite2.BriteDatabase;
 
+import net.dean.jraw.models.Multireddit;
 import net.dean.jraw.models.Subreddit;
 
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -154,13 +156,13 @@ public class SubscriptionRepository {
     return database.get().createQuery(SubredditSubscription.TABLE_NAME, SubredditSubscription.QUERY_GET_ALL)
         .mapToList(SubredditSubscription.MAPPER)
         .firstOrError()
-        .flatMap(localSubscriptions -> refreshAndSaveSubscriptions(localSubscriptions))
+        .flatMap(this::refreshAndSaveSubscriptions)
         .toCompletable();
   }
 
   @CheckResult
   private Single<List<SubredditSubscription>> refreshAndSaveSubscriptions(List<SubredditSubscription> localSubs) {
-    return fetchRemoteSubscriptions(localSubs).doOnSuccess(saveSubscriptionsToDatabase());
+    return fetchRemoteMultiSubscriptions(localSubs).doOnSuccess(saveSubscriptionsToDatabase());
   }
 
   @CheckResult
@@ -172,7 +174,7 @@ public class SubscriptionRepository {
           return Single.just(SubredditSubscription.PendingState.PENDING_SUBSCRIBE);
         })
         .flatMapCompletable(pendingState -> Completable.fromAction(() -> {
-          SubredditSubscription subscription = SubredditSubscription.create(subscribeable.displayName(), pendingState, false);
+          SubredditSubscription subscription = SubredditSubscription.create(subscribeable.displayName(), pendingState, false, false);
           database.get().insert(SubredditSubscription.TABLE_NAME, subscription.toContentValues(), SQLiteDatabase.CONFLICT_REPLACE);
         }));
   }
@@ -296,7 +298,18 @@ public class SubscriptionRepository {
         : Single.just(loggedOutSubreddits());
     return subredditsStream
         .compose(applySchedulersSingle())
-        .map(mergeRemoteSubscriptionsWithLocal(localSubs));
+        .map(mergeRemoteSubscriptionsWithLocal(false, localSubs));
+  }
+
+  @CheckResult
+  private Single<List<SubredditSubscription>> fetchRemoteMultiSubscriptions(List<SubredditSubscription> localSubs) {
+    //Timber.w("Fetching subscriptions");
+    Single<List<String>> subredditsStream = userSessionRepository.get().isUserLoggedIn()
+            ? loggedInUserMultiSubscriptions()
+            : Single.just(new ArrayList<>());
+    return subredditsStream
+            .compose(applySchedulersSingle())
+            .map(mergeRemoteSubscriptionsWithLocal(true, localSubs));
   }
 
   /**
@@ -304,7 +317,7 @@ public class SubscriptionRepository {
    * pending subscribe and unsubscribe subscription.
    */
   @VisibleForTesting()
-  Function<List<String>, List<SubredditSubscription>> mergeRemoteSubscriptionsWithLocal(List<SubredditSubscription> localSubs) {
+  Function<List<String>, List<SubredditSubscription>> mergeRemoteSubscriptionsWithLocal(boolean isMulti, List<SubredditSubscription> localSubs) {
     return remoteSubNames -> {
       // So we've received subreddits from the server. Before overriding our database table with these,
       // retain pending-subscribe items and pending-unsubscribe items.
@@ -315,6 +328,9 @@ public class SubscriptionRepository {
 
       // Go through the local dataset first to find items that we and/or the remote already have.
       for (SubredditSubscription localSub : localSubs) {
+        if (isMulti != localSub.isMulti()) {
+          continue;
+        }
         if (remoteSubsNamesSet.contains(localSub.name())) {
           // Remote still has this sub.
           if (localSub.isUnsubscribePending()) {
@@ -352,7 +368,7 @@ public class SubscriptionRepository {
         if (!localSubsMap.containsKey(remoteSubName)) {
           // New sub found.
           //noinspection ResultOfMethodCallIgnored
-          syncedListBuilder.add(SubredditSubscription.create(remoteSubName, SubredditSubscription.PendingState.NONE, false));
+          syncedListBuilder.add(SubredditSubscription.create(remoteSubName, SubredditSubscription.PendingState.NONE, false, isMulti));
         }
       }
 
@@ -381,6 +397,18 @@ public class SubscriptionRepository {
           return remoteSubNames;
         })
         .map(toImmutable());
+  }
+
+  private Single<List<String>> loggedInUserMultiSubscriptions() {
+    return reddit.get().subscriptions().userMultiSubscriptions()
+            .map(remoteMultiSubs -> {
+              List<String> remoteSubNames = new ArrayList<>(remoteMultiSubs.size());
+              for (Multireddit multireddit : remoteMultiSubs) {
+                remoteSubNames.add(multireddit.getCodeName());
+              }
+              return remoteSubNames;
+            })
+            .map(toImmutable());
   }
 
   private List<String> loggedOutSubreddits() {
